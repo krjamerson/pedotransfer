@@ -6,6 +6,8 @@ if ("grid" %in% rownames(installed.packages()) == FALSE) {install.packages("grid
 if ("gridExtra" %in% rownames(installed.packages()) == FALSE) {install.packages("gridExtra")}
 if ("cowplot" %in% rownames(installed.packages()) == FALSE) {install.packages("cowplot")}
 if ("minpack.lm" %in% rownames(installed.packages()) == FALSE) {install.packages("minpack.lm")}
+if ("readr" %in% rownames(installed.packages()) == FALSE) {install.packages("readr")}
+if ("stringr" %in% rownames(installed.packages()) == FALSE) {install.packages("stringr")}
 
 
 #Water Retention Characterization (Author: Zach Hoylman)
@@ -18,6 +20,8 @@ library(gridExtra)
 library(cowplot)
 library(minpack.lm)
 library(dplyr)
+library(readr)
+library(stringr)
 
 read_excel_allsheets <- function(filename, tibble = FALSE) {
   # I prefer straight data.frames
@@ -105,33 +109,24 @@ plot_data = function(data){
 
 plot_time_series = function(data, model){
   #import data
-  time_series = read.csv(data) %>%
-    dplyr::filter(m?.m?.Water.Content > 0)
-  
-  #convert datetime
-  time_series$Timestamp = as.POSIXct(time_series$Timestamp, format = c("%m/%d/%Y %H:%M"))
-  head(time_series$Timestamp)
+  time_series = data
   #store model coef
   model_coef = coef(model[[1]])
   
-  time_series$m?.m?.Water.Content[time_series$m?.m?.Water.Content > 2] =NA 
-  
-  
   #inverse model to predict pressure from VWC
-  time_series$kPa = ((((((model_coef['s'] - model_coef['r'])/(time_series$m?.m?.Water.Content - model_coef['r']))^((model_coef['n']/(model_coef['n']-1))))-1)^(1/model_coef['n']))/model_coef['a'])
+  time_series$kPa = ((((((model_coef['s'] - model_coef['r'])/(time_series$vwc - model_coef['r']))^((model_coef['n']/(model_coef['n']-1))))-1)^(1/model_coef['n']))/model_coef['a'])
   
-  vwc_time_series = ggplot(data = time_series, aes(x = Timestamp, y = m?.m?.Water.Content))+ 
+  vwc_time_series = ggplot(data = time_series, aes(x = datetime, y = vwc))+ 
     geom_line()+
     theme_bw()+
     ylab(expression(paste("VWC (", m^3," ", m^-3,")")))+
     theme(text = element_text(size=18),
           axis.title.x=element_blank(),
           axis.text.x=element_blank(),
-          axis.ticks.x=element_blank())+
-    ylim(0.01, max(time_series$m?.m?.Water.Content))
+          axis.ticks.x=element_blank())
   
   
-  kPa_time_series = ggplot(data = time_series, aes(x = Timestamp, y = kPa))+
+  kPa_time_series = ggplot(data = time_series, aes(x = datetime, y = kPa))+
     geom_line()+
     theme_bw()+
     scale_y_log10()+
@@ -139,7 +134,7 @@ plot_time_series = function(data, model){
     xlab("Time")+
     theme(text = element_text(size=18))+
     geom_hline(yintercept=c(1500), linetype = "dashed", color = "red")+
-    annotate(geom = "text", x = time_series$Timestamp[round(length(time_series$Timestamp)*.7,0)], y = 2500, hjust = 1.5, 
+    annotate(geom = "text", x = time_series$datetime[round(length(time_series$datetime)*.5,0)], y = 2500, hjust = 1.5, 
              label = "Theoretical Wilting Point", size = 5, color = "red")+
     expand_limits(y = 10000)
   
@@ -152,10 +147,20 @@ plot_time_series = function(data, model){
 work.dir = "/home/kjamerson/pedotransfer/data/MDA Chinook 181005/Post-Processing"
 
 data = list.files(work.dir, pattern = ".xlsx$", full.names = T)
-timeseries = list.files(work.dir, pattern = ".csv$", full.names = T)
+
+#list to store timeseries
+timeseries = list()
+timeseries[[1]] = read_csv('https://mesonet.climate.umt.edu/api/observations?stations=mdachine&elements=soilwc08&latest=false&start_time=2021-08-01&tz=US%2FMountain&wide=true&simple_datetime=false&public=true&sn=false&type=csv') %>%
+  mutate(datetime = datetime %>%
+           lubridate::with_tz("America/Denver")) %>%
+  `colnames<-`(c('station_key', 'datetime', 'vwc'))
+timeseries[[2]] = read_csv('https://mesonet.climate.umt.edu/api/observations?stations=mdachine&elements=soilwc20&latest=false&start_time=2021-08-01&tz=US%2FMountain&wide=true&simple_datetime=false&public=true&sn=false&type=csv') %>%
+  mutate(datetime = datetime %>%
+           lubridate::with_tz("America/Denver"))%>%
+  `colnames<-`(c('station_key', 'datetime', 'vwc'))
 
 data_short = list.files(work.dir, pattern = ".xlsx$")
-timeseries_short = list.files(work.dir, pattern = ".csv$")
+timeseries_short = data_short
 
 check = cbind(data_short, timeseries_short)
 print(check)
@@ -174,11 +179,11 @@ for(i in 1:length(data)){
   ggsave(filename = paste0(write.dir,'/',model[[4]],"_water_retension_curve.png"), plot = last_plot(), dpi = 500,
          units = "in", width = 10, height = 6)
   
-  # plot_time_series(timeseries[i],model)
-  # ggsave(filename = paste0(write.dir,'/',model[[4]],"_timeseries.png"), plot = last_plot(), dpi = 500,
-  #        units = "in", width = 9, height = 6)
-  # 
-  # 
+  plot_time_series(timeseries[[i]],model)
+  ggsave(filename = paste0(write.dir,'/',model[[4]],"_timeseries.png"), plot = last_plot(), dpi = 500,
+         units = "in", width = 9, height = 6)
+
+
   capture.output(summary(model[[1]]), file = paste0(write.dir,'/', model[[4]], "_model_information.txt"))
   
 }
