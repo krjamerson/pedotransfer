@@ -1,0 +1,17 @@
+
+Formula: VWC ~ r + (s - r)/((1 + a * (abs(kPa)^n))^(1 - (1/n)))
+
+Parameters:
+  Estimate Std. Error t value Pr(>|t|)    
+r  0.03861    0.07111   0.543   0.5887    
+s  0.60666    0.01839  32.996   <2e-16 ***
+a  0.51142    0.28573   1.790   0.0774 .  
+n  1.14283    0.03455  33.078   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.01763 on 77 degrees of freedom
+
+Number of iterations to convergence: 10 
+Achieved convergence tolerance: 1.49e-08
+

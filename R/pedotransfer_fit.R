@@ -36,13 +36,12 @@ lseq <- function(from=1, to=100000, length.out=6) {
   exp(seq(log(from), log(to), length.out = length.out))
 }
 
-
 fit_soils = function(data){
   file_name = basename(data)
   data = read_excel_allsheets(data)
   
   #select sheet
-  pf_vwc = data$`Evaluation-Retention T(pF)`%>%
+  pf_vwc = data$`Evaluation-Retention Î˜(pF)`%>%
     dplyr::filter(`pF [-]` >= 1)
   
   
@@ -107,7 +106,7 @@ plot_data = function(data){
 plot_time_series = function(data, model){
   #import data
   time_series = read.csv(data) %>%
-    dplyr::filter(m³.m³.Water.Content > 0)
+    dplyr::filter(m?.m?.Water.Content > 0)
   
   #convert datetime
   time_series$Timestamp = as.POSIXct(time_series$Timestamp, format = c("%m/%d/%Y %H:%M"))
@@ -115,13 +114,13 @@ plot_time_series = function(data, model){
   #store model coef
   model_coef = coef(model[[1]])
   
-  time_series$m³.m³.Water.Content[time_series$m³.m³.Water.Content > 2] =NA 
+  time_series$m?.m?.Water.Content[time_series$m?.m?.Water.Content > 2] =NA 
   
   
   #inverse model to predict pressure from VWC
-  time_series$kPa = ((((((model_coef['s'] - model_coef['r'])/(time_series$m³.m³.Water.Content - model_coef['r']))^((model_coef['n']/(model_coef['n']-1))))-1)^(1/model_coef['n']))/model_coef['a'])
+  time_series$kPa = ((((((model_coef['s'] - model_coef['r'])/(time_series$m?.m?.Water.Content - model_coef['r']))^((model_coef['n']/(model_coef['n']-1))))-1)^(1/model_coef['n']))/model_coef['a'])
   
-  vwc_time_series = ggplot(data = time_series, aes(x = Timestamp, y = m³.m³.Water.Content))+ 
+  vwc_time_series = ggplot(data = time_series, aes(x = Timestamp, y = m?.m?.Water.Content))+ 
     geom_line()+
     theme_bw()+
     ylab(expression(paste("VWC (", m^3," ", m^-3,")")))+
@@ -129,7 +128,7 @@ plot_time_series = function(data, model){
           axis.title.x=element_blank(),
           axis.text.x=element_blank(),
           axis.ticks.x=element_blank())+
-    ylim(0.01, max(time_series$m³.m³.Water.Content))
+    ylim(0.01, max(time_series$m?.m?.Water.Content))
   
   
   kPa_time_series = ggplot(data = time_series, aes(x = Timestamp, y = kPa))+
@@ -149,7 +148,8 @@ plot_time_series = function(data, model){
   return(plot_total)
 }
 
-work.dir = tk_choose.dir(caption = "Select folder with files (Hyprop = .xlsx, Timeseries = .csv)")
+#work.dir = tk_choose.dir(caption = "Select folder with files (Hyprop = .xlsx, Timeseries = .csv)")
+work.dir = "/home/kjamerson/pedotransfer/data/MDA Chinook 181005/Post-Processing"
 
 data = list.files(work.dir, pattern = ".xlsx$", full.names = T)
 timeseries = list.files(work.dir, pattern = ".csv$", full.names = T)
@@ -161,7 +161,8 @@ check = cbind(data_short, timeseries_short)
 print(check)
 
 #user select write dir for plot export
-write.dir = tk_choose.dir(caption = "Select Write Directory")
+#write.dir = tk_choose.dir(caption = "Select Write Directory")
+write.dir = "/home/kjamerson/pedotransfer/data/MDA Chinook 181005/OUTPUTS"
 
 for(i in 1:length(data)){
   #run model fit
@@ -173,11 +174,11 @@ for(i in 1:length(data)){
   ggsave(filename = paste0(write.dir,'/',model[[4]],"_water_retension_curve.png"), plot = last_plot(), dpi = 500,
          units = "in", width = 10, height = 6)
   
-  plot_time_series(timeseries[i],model)
-  ggsave(filename = paste0(write.dir,'/',model[[4]],"_timeseries.png"), plot = last_plot(), dpi = 500,
-         units = "in", width = 9, height = 6)
-  
-  
+  # plot_time_series(timeseries[i],model)
+  # ggsave(filename = paste0(write.dir,'/',model[[4]],"_timeseries.png"), plot = last_plot(), dpi = 500,
+  #        units = "in", width = 9, height = 6)
+  # 
+  # 
   capture.output(summary(model[[1]]), file = paste0(write.dir,'/', model[[4]], "_model_information.txt"))
   
 }
